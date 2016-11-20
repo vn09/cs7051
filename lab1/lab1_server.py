@@ -9,7 +9,7 @@ from urlparse import urlparse
 from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 import re
 
-PORT_NUMBER = 8765
+PORT_NUMBER = 8080
 
 #This class will handles any incoming request from the browser
 class myHandler(BaseHTTPRequestHandler):

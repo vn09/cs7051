@@ -2,7 +2,7 @@ import requests
 import random
 import string
 
-PORT_NUMBER = 8765
+PORT_NUMBER = 8080
 HOST_DOMAIN = "http://localhost"
 TEST_ENDPOINT = HOST_DOMAIN + ":" + str(PORT_NUMBER) + "/echo"
 

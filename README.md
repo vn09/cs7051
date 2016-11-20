@@ -16,5 +16,14 @@ python lab1/lab1_client.py
 ```
 
 ## Lab 2
+Server
+```
+sh lab2/comile.sh
+sh lab2/start.sh 8080
+```
+Client test
+```
+python lab2/lab2_client.py
+```
 
 ## Lab 3
