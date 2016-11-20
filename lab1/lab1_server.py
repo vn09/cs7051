@@ -6,26 +6,44 @@
 # with upppercase.
 
 from urlparse import urlparse
-import
-query = urlparse(self.path).query
-query_components = dict(qc.split("=") for qc in query.split("&"))
-imsi = query_components["imsi"]
-# query_components = { "imsi" : "Hello" }
+from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
+import re
 
-# Or use the parse_qs method
-# from urlparse import urlparse, parse_qs
-# query_components = parse_qs(urlparse(self.path).query)
-# imsi = query_components["imsi"]
+PORT_NUMBER = 8765
 
-# import SimpleHTTPServer
-# import SocketServer
+#This class will handles any incoming request from the browser
+class myHandler(BaseHTTPRequestHandler):
+    #Handler for the GET requests
+    def do_GET(self):
+        msg = "Invalid endpoint. Please use endpoint: /echo?message=xxx"
+        print self.path
+        if re.match(r"/echo\?message=?", self.path):
+            query = urlparse(self.path).query
+            query_components = dict(qc.split("=") for qc in query.split("&"))
+            msg = " " + query_components["message"]
+            msg = msg.upper() + "\n"
 
-# PORT = 8000
+        self.send_response(200)
+        self.send_header('Content-type','text/html')
+        self.end_headers()
+        # Send the html message
+        self.wfile.write(msg)
 
-# Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
+        return
 
-# httpd = SocketServer.TCPServer(("", PORT), Handler)
+if __name__ == "__main__":
+    try:
+        #Create a web server and define the handler to manage the
+        #incoming request
+        server = HTTPServer(('', PORT_NUMBER), myHandler)
+        print('Started httpserver on port %s' %PORT_NUMBER)
 
-# print "serving at port", PORT
-# httpd.serve_forever()
+        #Wait forever for incoming htto requests
+        server.serve_forever()
+
+    except KeyboardInterrupt:
+        print('^C received, shutting down the web server')
+        server.socket.close()
+
+
 

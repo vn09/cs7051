@@ -10,6 +10,10 @@ wget -qO- https://bootstrap.pypa.io/get-pip.py | python
 
 # How to run
 ## Lab 1
+```
+python lab1/lab1_server.py
+python lab1/lab1_client.py
+```
 
 ## Lab 2
 

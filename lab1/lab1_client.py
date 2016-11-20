@@ -2,11 +2,13 @@ import requests
 import random
 import string
 
-SERVER_TEST = "http://localhost:8000/echo/"
+PORT_NUMBER = 8765
+HOST_DOMAIN = "http://localhost"
+TEST_ENDPOINT = HOST_DOMAIN + ":" + str(PORT_NUMBER) + "/echo"
 
 if __name__ == "__main__":
     random_string = ''.join([random.choice(string.ascii_letters + string.digits) for n in xrange(16)])
 
-    payload = {'message': 'test'}
-    r = requests.get(SERVER_TEST, params=payload)
+    payload = {'message': random_string}
+    r = requests.get(TEST_ENDPOINT, params=payload)
     print r.text
