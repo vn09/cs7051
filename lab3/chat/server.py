@@ -284,8 +284,8 @@ class Server:
         except:
           self.__client_disconnect(client)
     else:
-      user.send(Fore.GREEN + "<= " + msg + Style.RESET_ALL)
-      # user.send(msg)
+      # user.send(Fore.GREEN + "<= " + msg + Style.RESET_ALL)
+      user.send(msg)
 
   def __client_disconnect(self, client):
     client.get_session().close()
