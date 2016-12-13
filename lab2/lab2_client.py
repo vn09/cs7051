@@ -12,8 +12,7 @@ if __name__ == "__main__":
   try:
     random_string = ''.join(random.choice(string.digits + string.ascii_lowercase) for x in range(10))
     msgs = ['KILL_SERVICE\n', 'HELO ' + random_string + '\n']
-    # msg = random.choice(msgs)
-    msg = msgs[1]
+    msg = random.choice(msgs)
     sock.sendall(msg)
     response = sock.recv(1024)
     print(response)

@@ -1,3 +1,9 @@
 lab2/target/
 lab2/.idea/
 lab2/chat-server.iml
+
+# Compiled python files
+*.pyc
+
+#Folder view configuration files
+.DS_Store

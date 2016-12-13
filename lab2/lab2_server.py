@@ -1,102 +1,138 @@
-import socket
-import threading
-import SocketServer
-from SocketServer import ThreadingMixIn
-from Queue import Queue
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 import os
+import socket
+import thread
 import argparse
 
-STUDENT_ID = "16314667"
-HOST = "localhost"
-PORT = None
 
-class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
-  def handle(self):
-    data = self.request.recv(1024)
-    cur_thread = threading.current_thread()
-    print("{}: {}".format(cur_thread.name, data))
-    msgs = data.split()
+class Client:
+  def __init__(self, session):
+    self.connection = session[0]
+    self.address = session[1]
 
-    # Serve client based on the data server received
-    if msgs[0] == "KILL_SERVICE":
-      # Kill system
-      os._exit(1)
+  def send(self, msg):
+    self.send_raw(str(msg))
 
-    if msgs[0] == "HELO":
-      print("Receiving HELO message from client: (%s, %s)" % self.client_address)
-      response = "{}IP:{}\nPort:{}\nStudentID:{}\n".format(data, HOST, PORT, STUDENT_ID)
-      self.request.sendall(response)
-    else:
-      pass
+  def send_raw(self, msg):
+    self.connection.send(msg)
+
+  def get_session(self):
+    return self.connection
 
 
-class ThreadPoolMixIn(ThreadingMixIn):
-  """Use a thread pool instead of a new thread on every request"""
+class Server:
+  def __init__(self, port):
+    self.port = port
+    self.clients = list()
+    self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    self.student_id = "16314667"
+    self.server_ip = "127.0.0.1"
 
-  num_of_thread = 5
-  allow_reuse_address = True
+    self.response = {
+      'helo':
+        "HELO {}\n"
+        + "IP:{}\n"
+        + "Port:{}\n"
+        + "StudentID:{}",
+      'kill': "kill server"
+    }
 
-  def set_number_thread(self, num_threads):
-    self.num_of_thread = num_threads
-
-  def serve_forever(self):
-    """Handle one request at a time until doomsday."""
-
-    # set up the threadpool
-    self.requests = Queue(self.num_of_thread)
-
-    for x in range(self.num_of_thread):
-      t = threading.Thread(target=self.process_request_thread)
-      t.setDaemon(1)
-      t.start()
-
-    # server main loop
+  def start(self):
+    self.server.bind(('', self.port))
+    self.server.listen(5)
+    print("Running Server on PORT " + str(self.port))
     while True:
-      self.handle_request()
+      self.__start_session()
 
-    self.server_close()
+  def __start_session(self):
+    session = self.server.accept()
+    user = Client(session)
 
-  def process_request_thread(self):
-    """Obtain request from queue instead of directly from server socket"""
+    # new thread starts with function __client_handle with params user
+    thread.start_new_thread(self.__client_handle, (user,))
+
+  def __client_handle(self, client):
+    self.clients.append(client)
+    self.__command_handle(client)
+
+  def __read_data(self, client):
+    buff = ""
     while True:
-      ThreadingMixIn.process_request_thread(self, *self.requests.get())
+      data = client.get_session().recv(4096)
+      try:
+        data = data.decode(encoding='utf-8')
+      except:
+        data = " "
 
-  def handle_request(self):
-    """Use a thread pool instead of a new thread on every request"""
-    try:
-      request, client_address = self.get_request()
-    except socket.error:
-      return
-    if self.verify_request(request, client_address):
-      # Register request to queue
-      self.requests.put((request, client_address))
+      if not data:
+        if not buff:
+          break
+      elif buff:
+        data = buff + data
+        buff = ""
 
+      # TODO Need more work here.
+      if '\r\n' in data:
+        for line in data.splitlines(True):
+          if line.endswith('\r\n'):
+            yield line.replace("\r", "").replace("\n", "")
+          else:
+            buff = line
+      else:
+        buff += data
 
-class ThreadedTCPServer(ThreadPoolMixIn, SocketServer.TCPServer):
-  pass
+  def __command_handle(self, client):
+    while True:
+      block = None
+      try:
+        block = client.get_session().recv(4096)
+        block = block.replace("\\n", "\n")
+      except Exception as e:
+        print e.args
+        print e.message
+        self.__client_disconnect(client)
 
+      if block:
+        cmd = [sx.split() for sx in block.encode("utf-8").split("\n") if
+               len(sx) > 0]
+        cmd = len(cmd) and cmd or [['']]
 
-def main():
-  global PORT
-  parser = argparse.ArgumentParser(description='Argument to run server')
-  parser.add_argument('--p', action = "store", dest="port", type=int,
-                    help='an integer for the accumulator')
+        print cmd
+        if cmd[0][0] == "HELO":  # Helo message
+          self.__helo(cmd[0][1], client)
+        elif cmd[0][0] == "KILL_SERVICE":  # Kill service
+          self.__kill_service()
+        else:
+          self.__server_message(
+            "Unknown command!!!. Please use HELO or KILL_SERVICE.", client)
 
-  args = parser.parse_args()
-  PORT = args.port
+  def __helo(self, text, client):
+    self.__server_message(
+      self.response['helo'].format(text, self.server_ip, self.port,
+                                   self.student_id), client)
 
-  server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
+  def __server_message(self, msg, user=None):
+    user.send(msg)
 
-  # Init 10 threads
-  server.set_number_thread(10)
+  def __kill_service(self):
+    os._exit(1)
 
-  # Start a thread with the server -- that thread will then start one
-  # more thread for each request
-  server_thread = threading.Thread(target=server.serve_forever)
-  server_thread.start()
-
-  print("Server starts at (%s, %s)" % (HOST, PORT))
+  def __client_disconnect(self, client):
+    client.get_session().close()
 
 
 if __name__ == "__main__":
-  main()
+  port = 8080
+  parser = argparse.ArgumentParser(description='Argument to run server')
+  parser.add_argument('--p', action="store", dest="p", type=int,
+                      help='port number that socket server will run on')
+
+  args = parser.parse_args()
+
+  if args.p:
+    port = args.p
+
+  server = Server(port).start()
