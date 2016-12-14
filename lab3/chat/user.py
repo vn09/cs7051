@@ -24,7 +24,7 @@ class User:
     return self.room
 
   def send(self, msg):
-    self.send_raw(str(msg) + "\r\n")
+    self.send_raw(str(msg) + "\n")
 
   def send_raw(self, msg):
     self.connection.send(str(msg).encode('utf-8'))
