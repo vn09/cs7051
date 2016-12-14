@@ -310,7 +310,8 @@ class Server:
     # Remove in chat rooms
     if client.get_room():
       room_ref = self.room_refs[client.get_room()]
-      self.__remove_client_name(room_ref, client.get_name().lower)
+      if client.get_name():
+        self.__remove_client_name(room_ref, client.get_name().lower())
 
     # Send message to the chat room
     if client.get_room():
@@ -332,7 +333,7 @@ class Server:
 
     for (index, result) in self.chat_rooms[room_ref]['clients']:
       if result['name'] == name:
-        self.chat_rooms[room_ref]['clients'].removeAtIndex(index)
+        del(self.chat_rooms[room_ref]['clients'][index])
         break
 
   def __chat(self, room_ref, join_id, msg, client):
