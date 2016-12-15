@@ -25,6 +25,10 @@ class User:
   def get_room(self):
     return self.room
 
+  def remove_room(self, room):
+    if room in self.room:
+      self.room.remove(room)
+
   def set_join_id(self, join_id):
     self.join_id = join_id
 

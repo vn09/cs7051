@@ -82,6 +82,10 @@ class Server:
     session = self.server.accept()
     user = User(session)
 
+    # Initialise join id
+    join_id = str(self.__generate_unique_number())
+    user.set_join_id(join_id)
+
     # new thread starts with function __client_handle with params user
     thread.start_new_thread(self.__client_handle, (user,))
 
@@ -152,11 +156,7 @@ class Server:
             # TODO what is the error of joining
             room_name, client_name = cmd[0][1], cmd[3][1]
 
-            # Initialise join_id
-            join_id = str(self.__generate_unique_number())
-
             client.set_name(client_name)
-            client.set_join_id(join_id)
             client.set_room(room_name)
 
             self.__join_chat_room(room_name, client)
@@ -165,7 +165,6 @@ class Server:
             room_ref, join_id = cmd[0][1], cmd[1][1]
             self.__leave_room(room_ref, join_id, client=client)
           elif cmd[0][0] == "DISCONNECT":
-            # TODO
             self.__client_disconnect(client)
           elif cmd[0][0] == "CHAT" and len(cmd) == 4:
             room_ref, join_id, client_name = [cmd[id][1] for id in range(3)]
@@ -281,6 +280,10 @@ class Server:
         self.chat_rooms[room_ref]['clients'].remove(
           {'name': client.get_name().lower(), 'join_id': join_id})
 
+    # Remove room in client
+    room_name = self.chat_rooms[room_ref]["room_name"]
+    client.remove_room(room_name)
+
   def __server_message(self, msg, user=None):
     if not user:
       for client in self.clients:
@@ -292,22 +295,27 @@ class Server:
       user.send(msg)
 
   def __client_disconnect(self, client):
-    client.get_session().close()
-    for user in self.clients:
-      if user.get_name() and user.get_name().lower() == client.get_name().lower():
-        self.clients.remove(user)
+    # Broadcast Chat message
+    if client.get_room():
+      for room in client.get_room():
+        room_ref = self.room_refs[room]
+        self.__chat(room_ref,
+                    '{} has left this chatroom.'.format(client.get_name()),
+                    client)
+    else:
+      self.__server_message(client.get_name() + " has left the chat")
 
-    # Remove in chat rooms
+    # Remove client from chatroom
     if client.get_room():
       for room in client.get_room():
         room_ref = self.room_refs[room]
         if client.get_name():
           self.__remove_client_name(room_ref, client.get_name().lower())
 
-        self.__server_message(
-          client.get_name() + " has left the room: " + room)
-    else:
-      self.__server_message(client.get_name() + " has left the chat")
+    for user in self.clients:
+      if user.get_name() and user.get_name().lower() == client.get_name().lower():
+        self.clients.remove(user)
+    client.get_session().close()
 
   def __generate_unique_number(self):
     return int(uuid.uuid4().int >> 92)
@@ -316,7 +324,7 @@ class Server:
     os._exit(1)
 
   def __remove_client_name(self, room_ref, name):
-    for (index, result) in self.chat_rooms[room_ref]['clients']:
+    for (index, result) in enumerate(self.chat_rooms[room_ref]['clients']):
       if result['name'] == name:
         del (self.chat_rooms[room_ref]['clients'][index])
         break
