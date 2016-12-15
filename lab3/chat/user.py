@@ -5,6 +5,7 @@ class User:
   """
   Client information
   """
+
   def __init__(self, session):
     self.connection = session[0]
     self.address = session[1]
@@ -21,10 +22,13 @@ class User:
     self.room[join_id] = room
 
   def get_room(self, join_id=None):
-    if join_id:
-      return self.room[join_id]
-    else:
+    if not join_id:
       return self.room.values()
+
+    if join_id and join_id not in self.room.keys():
+      return None
+
+    return self.room[join_id]
 
   def send(self, msg):
     self.send_raw(str(msg) + "\n")

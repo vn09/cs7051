@@ -203,6 +203,8 @@ class Server:
   def __send_msg_to_room(self, msg, client, join_id, res=False):
     if not self.__validate_msg(msg):
       return
+    print("Client rooms: {}".format(client.get_room()))
+    print("Join id: {}".format(join_id))
     if not client.get_room(join_id):
       self.__server_message("Please join a room first.", client)
       self.__server_message("To join a room send JOIN_CHATROOM message", client)
