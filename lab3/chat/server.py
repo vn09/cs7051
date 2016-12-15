@@ -141,7 +141,9 @@ class Server:
               if len(sub_cmd) > 0:
                 cmd.append(sub_cmd)
 
-          print cmd
+          print("Chat rooms:".format(self.chat_rooms))
+          print("Command: {}".format(cmd))
+          
           if cmd[0][0] == "HELO":  # Helo message
             self.__helo(cmd[0][1], client)
           elif cmd[0][0] == "KILL_SERVICE":  # Kill service
@@ -151,11 +153,6 @@ class Server:
             room_name, client_name = cmd[0][1], cmd[3][1]
             client.set_name(client_name)
             self.__join_chat_room(room_name, client)
-
-            # Print chatroom here
-            print(self.chat_rooms)
-            print(self.room_refs)
-
           elif cmd[0][0] == "LEAVE_CHATROOM" and len(cmd) == 3:
             # TODO: Multiple leave messages
             room_ref, join_id = cmd[0][1], cmd[1][1]

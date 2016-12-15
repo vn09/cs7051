@@ -3,20 +3,22 @@
 
 class User:
   """
-  Client information
+  Client information. One thread can be multiple clients and join multiple chatrooms
   """
 
   def __init__(self, session):
     self.connection = session[0]
     self.address = session[1]
-    self.name = None
+    self.list_client = []
     self.room = {}
+    self.cur_name = None
 
   def set_name(self, client_name):
-    self.name = client_name
+    self.cur_name = client_name
+    self.list_client.append(client_name)
 
   def get_name(self):
-    return self.name
+    return self.cur_name
 
   def set_room(self, room, join_id):
     self.room[join_id] = room
