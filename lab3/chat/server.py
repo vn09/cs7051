@@ -151,6 +151,11 @@ class Server:
             room_name, client_name = cmd[0][1], cmd[3][1]
             client.set_name(client_name)
             self.__join_chat_room(room_name, client)
+
+            # Print chatroom here
+            print(self.chat_rooms)
+            print(self.room_refs)
+
           elif cmd[0][0] == "LEAVE_CHATROOM" and len(cmd) == 3:
             # TODO: Multiple leave messages
             room_ref, join_id = cmd[0][1], cmd[1][1]
@@ -170,14 +175,6 @@ class Server:
     for room in self.chat_rooms:
       self.__server_message(room + "(" + str(len(self.chat_rooms[room])) + ")",
                             client)
-
-  # list users all users
-  def __list_users(self, client):
-    for user in self.clients:
-      self.__server_message(
-        "nickanme: " + str(user.get_name()) + " (" + str(user.get_room()) + ")",
-        client)
-    self.__server_message("Total: " + str(len(self.clients)), client)
 
   def __list_users_in_room(self, room, client):
     if room not in self.chat_rooms:
@@ -203,10 +200,10 @@ class Server:
     room_ref = self.room_refs[room]
     return [x['name'] for x in self.chat_rooms[room_ref]['clients']]
 
-  def __send_msg_to_room(self, msg, client, res=False):
+  def __send_msg_to_room(self, msg, client, join_id, res=False):
     if not self.__validate_msg(msg):
       return
-    if not client.get_room():
+    if not client.get_room(join_id):
       self.__server_message("Please join a room first.", client)
       self.__server_message("To join a room send JOIN_CHATROOM message", client)
       return
@@ -214,8 +211,9 @@ class Server:
     for user in self.clients:
       if user.get_name() is not None \
               and user.get_name().lower() in self.__get_list_user_in_room(
-                client.get_room()):
-        response = "(" + client.get_room() + ") " + client.get_name() + ": " + msg
+                client.get_room(join_id)):
+        response = "(" + client.get_room(
+          join_id) + ") " + client.get_name() + ": " + msg
         if res:
           response = msg
         self.__server_message(response, user)
@@ -232,12 +230,10 @@ class Server:
     :param client: the client that connects to server currently
     :return:
     """
-    # if room in [client.get_room()]:
-    #   self.__server_message("You are already in room: " + room, client)
-    # else:
-    client.set_room(room)
+
     room_ref = None
     join_id = str(self.__generate_unique_number())
+    client.set_room(room, join_id)
 
     # Empty room
     room_names = [x['room_name'] for x in self.chat_rooms.values()]
@@ -264,7 +260,7 @@ class Server:
     msg = self.response['chat'].format(room_ref, client.get_name(),
                                        "{} has joined this chatroom.".format(
                                          client.get_name()))
-    self.__send_msg_to_room(msg, client, res=True)
+    self.__send_msg_to_room(msg, client, join_id, res=True)
 
   def __helo(self, text, client):
     self.__server_message(
@@ -281,7 +277,7 @@ class Server:
       msg = self.response['chat'].format(room_ref, client.get_name(),
                                          "{} has left this chatroom.".format(
                                            client.get_name()))
-      self.__send_msg_to_room(msg, client, res=True)
+      self.__send_msg_to_room(msg, client, join_id, res=True)
 
       # remove chat room
       if {'name': client.get_name().lower(), 'join_id': join_id} in \
@@ -293,12 +289,10 @@ class Server:
     if not user:
       for client in self.clients:
         try:
-          # client.send("<= " + msg)
           pass
         except:
           self.__client_disconnect(client)
     else:
-      # user.send(Fore.GREEN + "<= " + msg + Style.RESET_ALL)
       user.send(msg)
 
   def __client_disconnect(self, client):
@@ -309,14 +303,13 @@ class Server:
 
     # Remove in chat rooms
     if client.get_room():
-      room_ref = self.room_refs[client.get_room()]
-      if client.get_name():
-        self.__remove_client_name(room_ref, client.get_name().lower())
+      for room in client.get_room():
+        room_ref = self.room_refs[room]
+        if client.get_name():
+          self.__remove_client_name(room_ref, client.get_name().lower())
 
-    # Send message to the chat room
-    if client.get_room():
-      self.__server_message(
-        client.get_name() + " has left the room: " + client.get_room())
+        self.__server_message(
+          client.get_name() + " has left the room: " + room)
     else:
       self.__server_message(client.get_name() + " has left the chat")
 
@@ -327,19 +320,17 @@ class Server:
     os._exit(1)
 
   def __remove_client_name(self, room_ref, name):
-    print("Room ref: {}".format(room_ref))
-    print(self.chat_rooms[room_ref]['clients'])
-    print("Room name: {}".format(name))
-
     for (index, result) in self.chat_rooms[room_ref]['clients']:
       if result['name'] == name:
-        del(self.chat_rooms[room_ref]['clients'][index])
+        del (self.chat_rooms[room_ref]['clients'][index])
         break
 
   def __chat(self, room_ref, join_id, msg, client):
+    # When one client chat to the chatroom, all clients in the chatroom
+    # should receive the message.
     self.__send_msg_to_room(
       self.response['chat'].format(room_ref, client.get_name(), msg), client,
-      res=True)
+      join_id, res=True)
 
     # JOIN_CHATROOM: room1\nCLIENT_IP: 0\nPORT: 0\nCLIENT_NAME: vuong1
     # JOIN_CHATROOM: room1\nCLIENT_IP: 0\nPORT: 0\nCLIENT_NAME: vuong2
