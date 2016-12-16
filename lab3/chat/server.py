@@ -127,39 +127,36 @@ class Server:
         break
 
       if block:
-        if block.startswith("/help"):
-          self.__server_message(self.commands, client)
+        cmd = []
+        for sx in block.encode("utf-8").split("\n"):
+          if len(sx) > 0:
+            sub_cmd = re.split(r"\r| |:|\n", sx)
+            sub_cmd = [x for x in sub_cmd if len(x) > 0]
+            if len(sub_cmd) > 0:
+              cmd.append(sub_cmd)
+
+        if cmd[0][0] == "HELO":  # Helo message
+          self.__helo(cmd[0][1], client)
+        elif cmd[0][0] == "KILL_SERVICE":  # Kill service
+          self.__kill_service()
+        elif cmd[0][0] == "JOIN_CHATROOM" and len(cmd) == 4:  # join chat
+          room_name, client_name = cmd[0][1], cmd[3][1]
+
+          client.set_name(client_name)
+          client.set_room(room_name)
+
+          self.__join_chat_room(room_name, client)
+        elif cmd[0][0] == "LEAVE_CHATROOM" and len(cmd) == 3:
+          room_ref, join_id = cmd[0][1], cmd[1][1]
+          self.__leave_room(room_ref, join_id, client=client)
+        elif cmd[0][0] == "DISCONNECT":
+          self.__client_disconnect(client)
+        elif cmd[0][0] == "CHAT" and len(cmd) == 4:
+          room_ref, join_id, client_name = [cmd[id][1] for id in range(3)]
+          message = " ".join(cmd[3][1:])
+          self.__chat(room_ref, message, client)
         else:
-          cmd = []
-          for sx in block.encode("utf-8").split("\n"):
-            if len(sx) > 0:
-              sub_cmd = re.split(r"\r| |:|\n", sx)
-              sub_cmd = [x for x in sub_cmd if len(x) > 0]
-              if len(sub_cmd) > 0:
-                cmd.append(sub_cmd)
-
-          if cmd[0][0] == "HELO":  # Helo message
-            self.__helo(cmd[0][1], client)
-          elif cmd[0][0] == "KILL_SERVICE":  # Kill service
-            self.__kill_service(client)
-          elif cmd[0][0] == "JOIN_CHATROOM" and len(cmd) == 4:  # join chat
-            room_name, client_name = cmd[0][1], cmd[3][1]
-
-            client.set_name(client_name)
-            client.set_room(room_name)
-
-            self.__join_chat_room(room_name, client)
-          elif cmd[0][0] == "LEAVE_CHATROOM" and len(cmd) == 3:
-            room_ref, join_id = cmd[0][1], cmd[1][1]
-            self.__leave_room(room_ref, join_id, client=client)
-          elif cmd[0][0] == "DISCONNECT":
-            self.__client_disconnect(client)
-          elif cmd[0][0] == "CHAT" and len(cmd) == 4:
-            room_ref, join_id, client_name = [cmd[id][1] for id in range(3)]
-            message = " ".join(cmd[3][1:])
-            self.__chat(room_ref, message, client)
-          else:
-            self.__server_message("", client)
+          self.__server_message("", client)
 
   def __get_list_user_in_room(self, room_ref):
     return [x['name'] for x in self.chat_rooms[room_ref]['clients']]
@@ -282,11 +279,14 @@ class Server:
   def __generate_unique_number(self):
     return int(uuid.uuid4().int >> 92)
 
-  def __kill_service(self, client):
-    for user in self.clients:
-      user.get_session().close()
-    self.server.close()
+  def __kill_service(self):
     os._exit(1)
+    for user in self.clients:
+      user.get_session().shutdown(socket.SHUT_RDWR)
+      user.get_session().close()
+
+    self.server.shutdown(socket.SHUT_RDWR)
+    self.server.close()
 
   def __remove_client_name(self, room_ref, name):
     for (index, result) in enumerate(self.chat_rooms[room_ref]['clients']):
