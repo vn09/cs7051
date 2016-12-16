@@ -6,6 +6,8 @@ import socket
 import thread
 import uuid
 import re
+import fcntl
+import struct
 
 from user import User
 
@@ -17,9 +19,10 @@ class Server:
     self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     self.student_id = "16314667"
-    self.server_ip = "127.0.0.1"
     self.chat_rooms = {}
     self.room_refs = {}
+
+    self._set_ip()
 
     self.response = {
       'helo':
@@ -47,6 +50,20 @@ class Server:
         "CLIENT_NAME: {}\n"
         "MESSAGE: {}\n"
     }
+
+  def _set_ip(self):
+    try:
+      self.server_ip = self.get_ip_address("eth0")
+    except IOError as e:
+      self.server_ip = "127.0.0.1"
+
+  def get_ip_address(self, ifname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    return socket.inet_ntoa(fcntl.ioctl(
+      s.fileno(),
+      0x8915,  # SIOCGIFADDR
+      struct.pack('256s', ifname[:15])
+    )[20:24])
 
   def start(self):
     self.server.bind(('', self.port))
