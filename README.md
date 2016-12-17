@@ -28,7 +28,6 @@ python lab2/lab2_client.py
 
 ## Lab 3
 ```
-cd lab3
-sh ./start.sh 8181
+sh lab3/start.sh 8181
 ```
 8181 is the port of socket server.

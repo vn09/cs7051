@@ -1,1 +1,1 @@
-python ./lab2_server.py --p $1
+cd lab2 && python ./lab2_server.py --p $1

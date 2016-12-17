@@ -5,6 +5,8 @@ import os
 import socket
 import thread
 import argparse
+import struct
+import fcntl
 
 
 class Client:
@@ -29,7 +31,7 @@ class Server:
     self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     self.student_id = "16314667"
-    self.server_ip = "127.0.0.1"
+    self._set_ip()
 
     self.response = {
       'helo':
@@ -39,6 +41,20 @@ class Server:
         + "StudentID:{}",
       'kill': "kill server"
     }
+
+  def _set_ip(self):
+    try:
+      self.server_ip = self.get_ip_address("eth0")
+    except IOError as e:
+      self.server_ip = "127.0.0.1"
+
+  def get_ip_address(self, ifname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    return socket.inet_ntoa(fcntl.ioctl(
+      s.fileno(),
+      0x8915,  # SIOCGIFADDR
+      struct.pack('256s', ifname[:15])
+    )[20:24])
 
   def start(self):
     self.server.bind(('', self.port))
@@ -106,8 +122,7 @@ class Server:
         elif cmd[0][0] == "KILL_SERVICE":  # Kill service
           self.__kill_service()
         else:
-          self.__server_message(
-            "Unknown command!!!. Please use HELO or KILL_SERVICE.", client)
+          print("Unkown command")
 
   def __helo(self, text, client):
     self.__server_message(

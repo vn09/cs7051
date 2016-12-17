@@ -156,7 +156,7 @@ class Server:
           message = " ".join(cmd[3][1:])
           self.__chat(room_ref, message, client)
         else:
-          self.__server_message("", client)
+          print("Unknown command.")
 
   def __get_list_user_in_room(self, room_ref):
     return [x['name'] for x in self.chat_rooms[room_ref]['clients']]
