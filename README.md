@@ -8,6 +8,9 @@ Code for the labs are in [lab1](./lab1), [lab2](./lab2) and [lab3](./lab3) respe
 wget -qO- https://bootstrap.pypa.io/get-pip.py | python
 ```
 
+```
+pip install -r requirement.txt
+```
 # How to run
 ## Lab 1
 ```
