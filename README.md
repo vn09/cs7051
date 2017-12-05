@@ -33,4 +33,4 @@ python lab2/lab2_client.py
 ```
 sh lab3/start.sh 8181
 ```
-8181 is the port of socket server.
+Server uses port 8181 to accept connections from clients.
